@@ -7,15 +7,20 @@
 open System
 open System.Linq
 
-let input = System.IO.File.ReadAllText("sample.txt")
+let input = System.IO.File.ReadAllText("part1.txt")
 
 let inputLines = input.Split("\r\n") 
 
 inputLines.[0].Where(fun c -> Char.IsDigit((c)))
 
 let extractDigits(line:string) =  
-    line.Where(Char.IsDigit)
+    (line.Where(Char.IsDigit)).ToArray()
 
-let inputDigits =  inputLines |> (Array.map (fun s -> extractDigits(s))) 
+let inputDigits =  inputLines |> (Array.map (fun s -> extractDigits(s)))
 
-inputDigits
+let firstAndLast (digits: char []) = 
+    (digits.[0].ToString() + (digits |> Array.last).ToString()) |> int
+
+inputDigits.[0].ToArray() |> firstAndLast
+
+let foo  = inputDigits |> Array.map firstAndLast |> Array.sum

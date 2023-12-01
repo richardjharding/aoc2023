@@ -1,0 +1,77 @@
+#!meta
+
+{"kernelInfo":{"defaultKernelName":"csharp","items":[{"aliases":[],"name":"csharp"},{"aliases":[],"languageName":"fsharp","name":"fsharp"}]}}
+
+#!fsharp
+
+open System
+open System.Linq
+
+let input = System.IO.File.ReadAllText("part1.txt")
+
+let inputLines = input.Split("\r\n") 
+
+let lineCount = inputLines.Count()
+
+let f = inputLines.[0]
+
+let firstline = inputLines.[0] |> Seq.toList
+
+//way harder than it should be - not the best approach and needed a hint already - fooled by the "oneight" type overlaps
+
+
+let rec extractDigits (acc: int list) (input: char list)  =
+    match input with
+    | 'e'::'i'::'g'::'h'::'t'::'h'::'r'::'e'::'e'::t -> extractDigits (3::8::acc) t
+    //| 's'::'e'::'v'::'e'::'n'::'i'::'n'::'e'::t -> extractDigits (7::9::acc) t  
+    | 'o'::'n'::'e'::'i'::'g'::'h'::'t'::t -> extractDigits (8::1::acc) t
+    | 't'::'h'::'r'::'e'::'e'::'i'::'g'::'h'::'t'::t -> extractDigits (8::3::acc) t
+    | 'f'::'i'::'v'::'e'::'i'::'g'::'h'::'t'::t -> extractDigits (8::5::acc) t
+    | 'n'::'i'::'n'::'e'::'i'::'g'::'h'::'t'::t -> extractDigits (8::9::acc) t
+    | 't'::'w'::'o'::'n'::'e'::t -> extractDigits (1::2::acc) t
+    | 's'::'e'::'v'::'e'::'n'::'i'::'n'::'e'::t -> extractDigits (9::7::acc) t
+    | 'e'::'i'::'g'::'h'::'t'::'w'::'o'::t  -> extractDigits (2::8::acc) t
+    | 'o'::'n'::'e':: t 
+    | '1' :: t -> extractDigits (1::acc) t
+    | 't'::'w'::'o' :: t 
+    | '2'::t -> extractDigits (2::acc) t
+    | 't'::'h'::'r'::'e'::'e'::t
+    | '3'::t -> extractDigits (3::acc) t
+    | 'f'::'o'::'u'::'r'::t
+    | '4':: t -> extractDigits (4::acc) t
+    | 'f'::'i'::'v'::'e'::t
+    | '5'::t -> extractDigits (5::acc) t
+    | 's'::'i'::'x'::t
+    | '6'::t -> extractDigits (6::acc) t
+    | 's'::'e'::'v'::'e'::'n'::t 
+    | '7'::t -> extractDigits (7::acc) t
+    | 'e'::'i'::'g'::'h'::'t'::t 
+    | '8'::t -> extractDigits (8::acc) t
+    | 'n'::'i'::'n'::'e'::t
+    | '9'::t -> extractDigits (9::acc) t
+    // | 'z'::'e'::'r'::'o'::t 
+    // | '0'::t ->  extractDigits (0::acc) t
+    
+    | [] -> acc |> List.rev
+    | h::t -> extractDigits acc t
+
+let foo = extractDigits [] firstline
+
+let firstAndLast (numbers:int list) =
+    (numbers.First().ToString() + ((numbers |> List.last) |> string)) |> int
+
+let convertToSeq (s:string) =
+    s.ToLower() |> Seq.toList
+    
+
+extractDigits [] ("3dmpsix9nhgzhbmknfour19oneightlng" |> Seq.toList) |> firstAndLast
+
+// let pairs = (Array.map convertToSeq inputLines) |> Array.map (extractDigits []) 
+
+
+
+// let x = pairs |> Array.map firstAndLast
+
+
+
+let answer = (Array.map convertToSeq inputLines) |> Array.map (extractDigits []) |> Array.map firstAndLast |> Array.sum
