@@ -1,0 +1,21 @@
+#!meta
+
+{"kernelInfo":{"defaultKernelName":"fsharp","items":[{"aliases":[],"languageName":"fsharp","name":"fsharp"}]}}
+
+#!fsharp
+
+open System
+open System.Linq
+
+let input = System.IO.File.ReadAllText("sample.txt")
+
+let inputLines = input.Split("\r\n") 
+
+inputLines.[0].Where(fun c -> Char.IsDigit((c)))
+
+let extractDigits(line:string) =  
+    line.Where(Char.IsDigit)
+
+let inputDigits =  inputLines |> (Array.map (fun s -> extractDigits(s))) 
+
+inputDigits
