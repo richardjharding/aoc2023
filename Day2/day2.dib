@@ -1,0 +1,110 @@
+#!meta
+
+{"kernelInfo":{"defaultKernelName":"fsharp","items":[{"aliases":[],"languageName":"fsharp","name":"fsharp"}]}}
+
+#!fsharp
+
+open System
+open System.Linq
+
+type Colour =
+    | Red 
+    | Blue
+    | Green
+    | Unknown
+
+type ScoreEntry = {Colour: Colour; Score: int}
+
+type Round = {Score: ScoreEntry list}
+
+type Game = {Id: int; Rounds: Round list}
+
+type Bag = {Red:int; Green: int; Blue:int}
+
+#!fsharp
+
+let pass = {Id = 1; Rounds = [{Score = [{Colour =  Blue; Score = 3};{Colour = Red; Score = 4}]};
+                              {Score = [{Colour =  Red; Score = 1}; {Colour = Green; Score = 2}; {Colour = Blue; Score = 6}]};
+                              {Score =  [{Colour = Green; Score = 2}]}]}
+
+let fail = {Id = 3; Rounds = [{Score = [{Score = 8; Colour = Green}; {Score = 6; Colour = Blue};{Score = 20; Colour = Red}]};
+                               {Score = [{Score = 5; Colour = Blue};{Score = 4; Colour = Red}; {Score = 13; Colour=Green}]};
+                               {Score = [{Score = 5; Colour=Green};{Score=1;Colour=Red}]}]};
+                            
+
+
+let sampleBag = {Red = 12; Green = 13; Blue = 14}
+
+let IsScoreExceeded (bag:Bag) (score:ScoreEntry) = 
+    match score.Colour with
+    | Red -> if score.Score > bag.Red then true else false
+    | Green -> if score.Score > bag.Green then true else false
+    | Blue -> if score.Score > bag.Blue then true else false
+
+let roundExceeds (bag:Bag) (rounds: Round list) =
+    rounds.Any(fun r -> r.Score.Any(IsScoreExceeded bag))
+    
+    
+roundExceeds sampleBag fail.Rounds
+
+let IsGamePossible (bag:Bag) (game:Game) =
+    not (roundExceeds bag game.Rounds)
+    
+
+IsGamePossible sampleBag fail
+
+#!fsharp
+
+let input = System.IO.File.ReadAllText("input.txt")
+
+let inputLines = input.Split("\r\n")
+
+let game1 = inputLines.[0]
+
+let gameId = game1.Split(":").[0].Replace("Game ","") |> int
+
+let round1  =game1.Split(":").[1].Split(";").[0]
+
+let firstScore = round1.Split(",").[0].TrimStart().Split(" ").[0] |> int
+
+let firstColour = round1.Split(",").[0].TrimStart().Split(" ").[1]
+
+#!fsharp
+
+let matchColour (c:string) = 
+    match c with
+    | "red" -> Red
+    | "blue" -> Blue
+    | "green" -> Green
+    | _ -> Unknown
+    
+let parseScore (score:string) = 
+  score.TrimStart().Split(", ")
+  |> Array.map(fun s ->
+                  let parts = s.Split(" ")
+                  let c = parts.[1] |> string |> matchColour
+                  let v = parts.[0] |> int
+                  {Score = v; Colour = c}
+  )
+  |> Array.toList   
+  //{Score = (scores |> Array.toList)}
+
+let parseRounds (roundsString:string) =   
+  roundsString.Split(";")
+  |> Array.map (fun r ->
+                    
+                    {Score = parseScore r}
+  )
+  |> Array.toList
+  
+
+let parseGame (line:string) = 
+    let gameId = line.Split(":").[0].Replace("Game ","") |> int
+    let rounds = line.Split(":").[1]
+    
+    {Id = gameId; Rounds = (parseRounds rounds)}
+
+
+let games = inputLines |> Array.map parseGame
+
+games.Where(IsGamePossible sampleBag).Select(fun g -> g.Id).ToList().Sum()
