@@ -17,8 +17,9 @@ type Point = {X:int; Y:int}
 
 type ProductNumber = {Start:Point; End:Point; Value:int; IsValid: bool option}
 
+type Asterix = {Row:int; Col:int}
 
-//type Cell = {X:int; Y:int; Contents: CellContent}
+type Cell = {Row:int; Col:int; Contents: CellContent}
 
 let ParseCellContent (c:char) = 
     match c with
@@ -83,13 +84,6 @@ let mapping i j cell =
     | false -> 0
 
 
-
-inputLines.[0]
-
-grid[0]
-
-gridNumbers.[4]
-
 let IsValidGridNumber (grid: CellContent [,]) (num: ProductNumber) = 
     [num.Start.X..num.End.X]
     |> Seq.map (fun x ->
@@ -113,3 +107,47 @@ bar |> Seq.map (fun g ->
                     )
                     |> Seq.where (fun g -> g.IsValid = Some true)
                     |> Seq.sumBy (fun g -> g.Value)
+
+#!fsharp
+
+//part 2 find pairs of numbers with * in common
+// find all the * symbols
+// hit test * for any pair of numbers - there could be multiple pairs!!! - add a check for number of hits first
+
+let mappingToCell row col (cellValue:CellContent)= 
+    {Row = row; Col = col; Contents = cellValue}
+
+let gridNumberSeq = seq {for item in gridNumbers do yield! item} 
+
+let mappedCells = grid2d |> Array2D.mapi mappingToCell
+
+let asterixe =  mappedCells |> flat2Darray |> Seq.filter (fun (c:Cell) -> 
+                                                                match c.Contents with
+                                                                | Symbol '*' -> true
+                                                                | _ -> false )
+
+let hitTest (asterix:Cell) (gridNumbers: seq<ProductNumber>) = 
+    let searchGrid = getNeighbours (asterix.Col, asterix.Row) mappedCells
+    let maxCol = searchGrid |> flat2Darray |> Seq.map (fun c -> c.Col) |> Seq.max
+    let minCol = searchGrid |> flat2Darray |> Seq.map (fun c -> c.Col) |> Seq.min
+    let maxRow = searchGrid |> flat2Darray |> Seq.map (fun c -> c.Row) |> Seq.max
+    let minRow = searchGrid |> flat2Darray |> Seq.map (fun c -> c.Row) |> Seq.min
+    //printf "Min Col: %i, Max Col: %i, Min Row: %i, Max Row: %i " minCol maxCol minRow maxRow
+    let hits = gridNumbers.Where(fun g ->
+                        //if y of number in limits of search box                        
+                        if(((g.Start.X >= minCol && g.Start.X <= maxCol) || (g.End.X <= maxCol && g.End.X >= minCol)) && (g.Start.Y >= minRow && g.Start.Y <= maxRow)) then true else false                        
+        )
+    if(hits.Count() = 2) then Some hits else None
+        
+
+let testAsterix = asterixe.ElementAt(1)
+
+//hitTest testAsterix gridNumberSeq
+
+let pairs = asterixe |> Seq.map (fun a -> hitTest a gridNumberSeq) |> Seq.where(fun p -> p.IsSome)
+
+//hitTest testAsterix gridNumberSeq
+
+pairs.ElementAt(0).Value.First().Value
+
+pairs |> Seq.map (fun pair -> (pair.Value.ElementAt(0).Value * pair.Value.ElementAt(1).Value)) |> Seq.sum
