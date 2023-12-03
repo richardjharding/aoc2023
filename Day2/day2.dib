@@ -108,3 +108,21 @@ let parseGame (line:string) =
 let games = inputLines |> Array.map parseGame
 
 games.Where(IsGamePossible sampleBag).Select(fun g -> g.Id).ToList().Sum()
+
+#!fsharp
+
+//part 2 for each Game
+// find the highest number of each colour (min of that colour required in bag)
+
+let maxRed = games.[1].Rounds.SelectMany(fun r -> r.Score.Where(fun s -> s.Colour = Red)).MaxBy(fun s -> s.Score).Score
+let maxBlue = games.[1].Rounds.SelectMany(fun r -> r.Score.Where(fun s -> s.Colour = Blue)).MaxBy(fun s -> s.Score).Score
+let maxGreen = games.[1].Rounds.SelectMany(fun r -> r.Score.Where(fun s -> s.Colour = Green)).MaxBy(fun s -> s.Score).Score
+
+let gamePower (game:Game) = 
+    let maxRed = game.Rounds.SelectMany(fun r -> r.Score.Where(fun s -> s.Colour = Red)).MaxBy(fun s -> s.Score).Score
+    let maxBlue = game.Rounds.SelectMany(fun r -> r.Score.Where(fun s -> s.Colour = Blue)).MaxBy(fun s -> s.Score).Score
+    let maxGreen = game.Rounds.SelectMany(fun r -> r.Score.Where(fun s -> s.Colour = Green)).MaxBy(fun s -> s.Score).Score
+    maxRed * maxBlue * maxGreen
+
+
+games |> Array.map gamePower |> Array.sum

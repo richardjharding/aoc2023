@@ -1,0 +1,115 @@
+#!meta
+
+{"kernelInfo":{"defaultKernelName":"fsharp","items":[{"aliases":[],"languageName":"fsharp","name":"fsharp"}]}}
+
+#!fsharp
+
+open System
+open System.Linq
+open System.Text.RegularExpressions
+
+type CellContent = 
+    | Blank
+    | Number of int
+    | Symbol of char
+
+type Point = {X:int; Y:int}
+
+type ProductNumber = {Start:Point; End:Point; Value:int; IsValid: bool option}
+
+
+//type Cell = {X:int; Y:int; Contents: CellContent}
+
+let ParseCellContent (c:char) = 
+    match c with
+    | '.' -> Blank
+    | x when (Char.IsDigit(x)) -> Number (x.ToString() |> int)
+    | x -> Symbol x
+
+let parseLine (line:string) = 
+    let rec processLine (acc: CellContent list) (list: char list) =
+        match list with
+        | h :: t -> processLine ((ParseCellContent h) :: acc) t
+        | [] -> acc
+    processLine [] (line |> Seq.toList) |> List.rev |> List.toArray
+
+
+//stolen from https://stackoverflow.com/questions/27577621/returning-neighbours-of-a-cell-in-a-given-matrix-f
+let getNeighbours (col,row) (matrix: 'a [,]) = 
+    //printf "Getting neighbours for %i,%i\r\n" row col
+    let lower n = max 0 (n - 1)
+    let upper n = min (matrix.GetUpperBound(0)) (n + 1)
+    matrix.[lower row..upper row, lower col..upper col]
+
+//taken from fsnippets
+let flat2Darray array2D = 
+                seq { for x in [0..(Array2D.length1 array2D) - 1] do 
+                          for y in [0..(Array2D.length2 array2D) - 1] do 
+                              yield array2D.[x, y] }
+
+let containsSymbol (neighbours: CellContent [,]) =
+    let search = flat2Darray neighbours
+    search.Any(fun c -> match c with
+                            | Symbol x -> true
+                            | _ -> false)
+
+let ParseProductNumbers (row:int) (line: string) = 
+    let pattern = "(\d+)"
+    let r = new Regex(pattern)
+    let matches = r.Matches(line)
+    let x = matches  |> Seq.map (fun m ->  {Start = {Y=row; X= m.Index};End= {X = (m.Index + m.Length - 1); Y=row}; Value = (m.Value |> int); IsValid = None})
+    x
+    
+
+#!fsharp
+
+let input = System.IO.File.ReadAllText("input.txt")
+
+let inputLines = input.Split("\r\n") 
+
+let grid = inputLines |> Array.map parseLine 
+
+let gridNumbers = inputLines |> Array.mapi ParseProductNumbers 
+
+let grid2d = Array2D.init (inputLines.[0].Length) (inputLines.Count()) (fun i j -> grid[i][j])
+
+
+let mapping i j cell = 
+    let search = getNeighbours (i,j) grid2d
+    match (containsSymbol search) with
+    | true -> match cell with
+                | Number x -> x
+                | _ -> 0
+    | false -> 0
+
+
+
+inputLines.[0]
+
+grid[0]
+
+gridNumbers.[4]
+
+let IsValidGridNumber (grid: CellContent [,]) (num: ProductNumber) = 
+    [num.Start.X..num.End.X]
+    |> Seq.map (fun x ->
+                let searchCentre = (x,num.Start.Y)
+                let searchGrid = getNeighbours  searchCentre grid
+                searchGrid |> containsSymbol
+                
+                )
+    |> Seq.where(fun x -> x = true) |> Seq.contains(true)
+
+
+
+
+let bar = seq {for item in gridNumbers do yield! item}
+
+bar |> Seq.map (fun g -> 
+                    
+                    match (IsValidGridNumber grid2d g) with
+                    | true -> {g with IsValid = Some true}
+                    | fale -> {g with IsValid = Some false}                   
+                    )
+                    |> Seq.where (fun g -> g.IsValid = Some true)
+                    |> Seq.sumBy (fun g -> g.Value)
