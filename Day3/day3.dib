@@ -112,7 +112,7 @@ bar |> Seq.map (fun g ->
 
 //part 2 find pairs of numbers with * in common
 // find all the * symbols
-// hit test * for any pair of numbers - there could be multiple pairs!!! - add a check for number of hits first
+// hit test * for any pair of numbers
 
 let mappingToCell row col (cellValue:CellContent)= 
     {Row = row; Col = col; Contents = cellValue}
@@ -132,9 +132,7 @@ let hitTest (asterix:Cell) (gridNumbers: seq<ProductNumber>) =
     let minCol = searchGrid |> flat2Darray |> Seq.map (fun c -> c.Col) |> Seq.min
     let maxRow = searchGrid |> flat2Darray |> Seq.map (fun c -> c.Row) |> Seq.max
     let minRow = searchGrid |> flat2Darray |> Seq.map (fun c -> c.Row) |> Seq.min
-    //printf "Min Col: %i, Max Col: %i, Min Row: %i, Max Row: %i " minCol maxCol minRow maxRow
-    let hits = gridNumbers.Where(fun g ->
-                        //if y of number in limits of search box                        
+    let hits = gridNumbers.Where(fun g ->           
                         if(((g.Start.X >= minCol && g.Start.X <= maxCol) || (g.End.X <= maxCol && g.End.X >= minCol)) && (g.Start.Y >= minRow && g.Start.Y <= maxRow)) then true else false                        
         )
     if(hits.Count() = 2) then Some hits else None
@@ -142,12 +140,7 @@ let hitTest (asterix:Cell) (gridNumbers: seq<ProductNumber>) =
 
 let testAsterix = asterixe.ElementAt(1)
 
-//hitTest testAsterix gridNumberSeq
-
 let pairs = asterixe |> Seq.map (fun a -> hitTest a gridNumberSeq) |> Seq.where(fun p -> p.IsSome)
 
-//hitTest testAsterix gridNumberSeq
-
-pairs.ElementAt(0).Value.First().Value
 
 pairs |> Seq.map (fun pair -> (pair.Value.ElementAt(0).Value * pair.Value.ElementAt(1).Value)) |> Seq.sum
