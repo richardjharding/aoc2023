@@ -1,0 +1,50 @@
+#!meta
+
+{"kernelInfo":{"defaultKernelName":"csharp","items":[{"aliases":[],"name":"csharp"},{"aliases":[],"languageName":"fsharp","name":"fsharp"}]}}
+
+#!fsharp
+
+open System
+open System.Linq
+
+type Game = {Id:int; WinningNumber: int list; Draw: int list; Hits: int list; Score: int}
+
+#!fsharp
+
+let input = System.IO.File.ReadAllText("sample.txt")
+
+let inputLines = input.Split("\r\n") 
+
+let firstLine = inputLines.[0]
+
+firstLine.Split(":")
+
+let parseGameId (line:String) = 
+    line.Split(":").[0].Replace("Card ", "") |> int
+
+let parseWinningNumbers (line:string) =
+    line.Split(":").[1].Split("|").[0].TrimStart().TrimEnd().Split(" ") |> Array.map (fun s -> int s) |> Array.toList
+
+let parseDraw (line:string) = 
+    line.Split(":").[1].Split("|").[1].TrimStart().Replace("  "," ").Split(" ") |> Array.map (fun s -> int s) |> Array.toList
+
+let hits (winners: int list) (draw: int list) =
+    draw.Intersect(winners) |> Seq.toList
+
+let calcStore (hits:int list) = 
+    let power = (hits.Length - 1)
+    pown 2 power
+
+let parseLine (line:string) = 
+    let id = parseGameId line
+    let winning = parseWinningNumbers line
+    let Draw = parseDraw line
+    let hits = hits winning Draw
+    let game = {Id = id; WinningNumber = winning; Draw = Draw; Hits = hits; Score = (calcStore hits)}
+    game
+    
+
+let parseGames (lines:string []) = 
+    lines |> Array.map (fun l -> parseLine l) |> Array.toList
+
+parseGames inputLines
