@@ -7,11 +7,11 @@
 open System
 open System.Linq
 
-type Game = {Id:int; WinningNumber: int list; Draw: int list; Hits: int list; Score: int}
+type Game = {Id:int; WinningNumber: int list; Draw: int list; Hits: int list; Score: int; Count: int}
 
 #!fsharp
 
-let input = System.IO.File.ReadAllText("sample.txt")
+let input = System.IO.File.ReadAllText("input.txt")
 
 let inputLines = input.Split("\r\n") 
 
@@ -20,10 +20,12 @@ let firstLine = inputLines.[0]
 firstLine.Split(":")
 
 let parseGameId (line:String) = 
-    line.Split(":").[0].Replace("Card ", "") |> int
+    line.Split(":").[0].Replace("Card", "").TrimStart() |> int
 
 let parseWinningNumbers (line:string) =
-    line.Split(":").[1].Split("|").[0].TrimStart().TrimEnd().Split(" ") |> Array.map (fun s -> int s) |> Array.toList
+    line.Split(":").[1].Split("|").[0].Replace("  "," ").TrimStart().TrimEnd().Split(" ") |> Array.map (fun s ->
+                                                             //printf "winner: %s\r\n" s
+                                                             int (s.TrimStart().TrimEnd())) |> Array.toList
 
 let parseDraw (line:string) = 
     line.Split(":").[1].Split("|").[1].TrimStart().Replace("  "," ").Split(" ") |> Array.map (fun s -> int s) |> Array.toList
@@ -40,11 +42,37 @@ let parseLine (line:string) =
     let winning = parseWinningNumbers line
     let Draw = parseDraw line
     let hits = hits winning Draw
-    let game = {Id = id; WinningNumber = winning; Draw = Draw; Hits = hits; Score = (calcStore hits)}
+    let game = {Id = id; WinningNumber = winning; Draw = Draw; Hits = hits; Score = (calcStore hits); Count = 1}
     game
     
 
 let parseGames (lines:string []) = 
     lines |> Array.map (fun l -> parseLine l) |> Array.toList
 
-parseGames inputLines
+parseGames inputLines |> List.sumBy (fun g -> g.Score)
+
+let gameInput = parseGames inputLines
+
+
+let rec produceCards2 (gInput: Game list) (range: int list) =
+    match range with
+    | h :: t -> (
+                    // get hits for current game
+                    let currentGame = gInput.Where(fun g -> g.Id = h).First()
+                    // get next x elements and inc count by count of current game
+                    let firstPart = gInput.Take(h) |> Seq.toList                   
+                    let rest = gInput |> List.removeManyAt 0 h
+                    let toUpdate = rest.Take(currentGame.Hits.Length) |> Seq.toList
+                    let updated = toUpdate |> List.map (fun g -> {g with Count = g.Count + currentGame.Count})
+                    //remove the updated from list
+                    let lastPart = rest |> List.removeManyAt 0 (currentGame.Hits.Length)
+                    // joing update with rest of elements and recurse
+                    //printf "First: %i Updated: %i Rest: %i Last: %i\r\n" firstPart.Length updated.Length rest.Length lastPart.Length
+                    let joined = (firstPart @ updated @ lastPart)
+                    //printf "Joined length: %i\r\n" joined.Length
+                    produceCards2 joined t
+                )
+    | [] -> gInput
+    
+
+(produceCards2 gameInput [1..194]) |> List.sumBy (fun g -> g.Count)
