@@ -1,0 +1,131 @@
+#!meta
+
+{"kernelInfo":{"defaultKernelName":"csharp","items":[{"aliases":[],"name":"csharp"},{"aliases":[],"languageName":"fsharp","name":"fsharp"}]}}
+
+#!fsharp
+
+open System
+open System.Linq
+
+type MapSpan = {Start: int64; End: int64}
+
+type MapRange = {SourceRange: MapSpan; DestinationRange: MapSpan}
+
+type Mapping = {MapType: string; Mappings: MapRange list}
+
+let parseMappingRange (mapping: string) =
+    let parts = mapping.Split(" ")
+    let sourceStart = parts.[1].ToString() |> int64
+    let destStart = parts.[0].ToString() |> int64
+    let len = parts.[2].ToString() |> int
+    //{SourceRange = [sourceStart .. (sourceStart + (int64 len) - (int64 1) )]; DestinationRange = [destStart .. (destStart + (int64 len) - (int64 1))]}
+    {SourceRange = {Start =  sourceStart; End = (sourceStart + (int64 len) - (int64 1) )};
+     DestinationRange = {Start = destStart; End = (destStart + (int64 len) - (int64 1))}}
+
+let canBeMapped (mappings: MapRange list) (source: int64) = 
+    let isInSpan (span: MapSpan) (target: int64) = 
+        if(span.Start <= target && target <= span.End) then true else false
+
+    
+    if (mappings.Any(fun m -> isInSpan m.SourceRange source)) then
+        Some (mappings.Where(fun m -> isInSpan m.SourceRange source).First())
+    else
+        None
+
+let mapSourceToDest (mappings: MapRange list) (source: int64) =     
+    match canBeMapped mappings source with
+    | Some m ->
+            let offset = source - m.SourceRange.Start
+            //printf "Offset: %i, Mapping Start: %i" offset m.SourceRange.Start
+            m.DestinationRange.Start + (offset)
+            // let sourceIndex = m.SourceRange |> List.findIndex (fun i -> i = source)
+            // m.DestinationRange.ElementAt(sourceIndex)
+    | None -> source
+
+let filePath = "input.txt"
+
+let loadSeeds = 
+    let input = System.IO.File.ReadAllText(filePath)
+    let inputLines = input.Split("\r\n")
+    let seedLine = inputLines.[0].Replace("seeds: ", "") 
+    seedLine.Split(" ") |> Array.map (fun s -> int64 s) |> Array.toList
+
+let loadMapping (label:string) = 
+    let input = System.IO.File.ReadAllText(filePath)
+    let inputLines = input.Split("\r\n") |> Array.toList
+    let labelIndex = inputLines |> List.findIndex (fun s -> s.Contains(label))
+    let readRows = inputLines |> List.removeManyAt 0 (labelIndex + 1)
+    if(label = "humidity-to-location") then
+        readRows |> List.map (fun s -> parseMappingRange s)
+    else
+        let stopIndex = readRows |> List.findIndex (fun s -> s = "")
+        readRows.Take(stopIndex) |> Seq.toList |> List.map (fun s -> parseMappingRange s)
+    
+//TODO don't store the maps as range - they are too big - use start/end and calc offset    
+
+
+let seedToSoilMap =  loadMapping "seed-to-soil" |> mapSourceToDest
+let soilToFertMap = loadMapping "soil-to-fertilizer" |> mapSourceToDest
+let fertToWaterMap = loadMapping "fertilizer-to-water" |> mapSourceToDest
+let waterToLightMap = loadMapping "water-to-light" |> mapSourceToDest
+let lightToTempMap = loadMapping "light-to-temperature" |> mapSourceToDest
+let tempToHumidMap = loadMapping "temperature-to-humidity" |> mapSourceToDest
+let humidToLocnMap = loadMapping "humidity-to-location" |> mapSourceToDest
+
+let mapChain = seedToSoilMap >> soilToFertMap >> fertToWaterMap >> waterToLightMap >> lightToTempMap >> tempToHumidMap >> humidToLocnMap
+
+
+let nearest = loadSeeds |> List.map mapChain |> List.min
+
+let loadSeeds2 = 
+    let input = System.IO.File.ReadAllText(filePath)
+    let inputLines = input.Split("\r\n")
+    inputLines
+
+//mapSourceToDest (loadMapping "seed-to-soil") 10
+//(loadMapping "seed-to-soil")
+
+loadSeeds2
+
+#!fsharp
+
+let loadSeeds2 = 
+    let input = System.IO.File.ReadAllText(filePath)
+    let inputLines = input.Split("\r\n")
+    let rec processSeeds (acc: MapSpan list) (seedNumbers: int64 list) =
+        match seedNumbers with
+        | start :: len :: rest -> processSeeds ({Start = start; End  = (start + (int64 len) - (int64 1))} :: acc) rest
+        | [] -> acc
+        | _ -> acc
+    
+    let numbers =  inputLines.[0].Replace("seeds: ", "").Split(" ") |> Array.toList |> List.map (fun s -> int64 s)
+    processSeeds List.empty numbers
+
+//mapSourceToDest (loadMapping "seed-to-soil") 10
+//(loadMapping "seed-to-soil")
+
+loadSeeds2
+
+// let findSmallestLocInSeedRange  (seedRange: MapSpan) =
+//     ({seedRange.Start .. seedRange.End} |> Seq.minBy (fun seed -> mapChain seed)) |> mapChain
+
+// loadSeeds2 |> List.map (fun r -> findSmallestLocInSeedRange r) |> List.min
+
+let foo (seedRang: MapSpan) = 
+    printf "Testing Range: %i -> %i \r\n" seedRang.Start seedRang.End
+    let mutable smallest: int64 = Int64.MaxValue
+    let myseq = {seedRang.Start .. seedRang.End}
+    for x in myseq do        
+        if ((mapChain x) < smallest) then
+            smallest <- (mapChain x)
+        else
+            smallest <- smallest
+    smallest
+
+//foo (loadSeeds2.ElementAt(0))
+
+let bar = loadSeeds2 |> List.map (fun s -> foo s)
+
+bar |> List.min
+
+//not the way to do it - correct but runtime of 114 minutes :)

@@ -1,0 +1,40 @@
+#!meta
+
+{"kernelInfo":{"defaultKernelName":"fsharp","items":[{"aliases":[],"languageName":"fsharp","name":"fsharp"}]}}
+
+#!fsharp
+
+open System
+open System.Linq
+
+type Race = {Record: int; Time: int}
+
+
+let distance speed  time = 
+    speed * time
+
+let durationOptions time = 
+    {0 + 1 .. time - 1}
+
+
+
+let distances timeLimit durationOptions  = 
+    durationOptions |> Seq.map (fun d -> distance d (timeLimit - d))
+
+let winningDurationsCount record time =
+    durationOptions time |> distances time |> Seq.filter (fun d -> d > record) |> Seq.length
+
+let sample = [{Record = 9; Time = 7}; {Record = 40; Time = 15}; {Record = 200; Time = 30}]
+
+
+
+let counts (races: Race list) = 
+    races |> List.map (fun r -> winningDurationsCount r.Record r.Time)
+
+counts sample |> List.reduce (*)
+
+#!fsharp
+
+let input = [{Record = 202; Time = 44}; {Record = 1076; Time = 82}; {Record = 1138; Time = 69}; {Record = 1458; Time = 81}]
+
+counts input |> List.reduce (*)
