@@ -1,0 +1,176 @@
+#!meta
+
+{"kernelInfo":{"defaultKernelName":"fsharp","items":[{"aliases":[],"languageName":"fsharp","name":"fsharp"}]}}
+
+#!fsharp
+
+open System
+open System.Linq
+
+type Rank =
+| Ace 
+| King 
+| Queen
+| Jack
+| Ten 
+| Nine
+| Eight
+| Seven
+| Six 
+| Five 
+| Four 
+| Three 
+| Two 
+
+
+type HandType = 
+    | FiveOfKind
+    | FourOfKind
+    | FullHouse
+    | ThreeOfKind
+    | TwoPair
+    | OnePair
+    | HighCard
+
+type Game = {HandString: string; Hand: int list; HandType: HandType; HandOrder: int; Bid: int}
+
+let parseHand (hand: string) =
+    hand |> Seq.toList |>  List.map (fun c -> match c with
+                                                | 'A' -> 14
+                                                | 'K' -> 13
+                                                | 'Q' -> 12
+                                                | 'J' -> 1
+                                                | 'T' -> 10
+                                                | '9' -> 9
+                                                | '8' -> 8
+                                                | '7' -> 7
+                                                | '6' -> 6
+                                                | '5' -> 5
+                                                | '4' -> 4
+                                                | '3' -> 3                              
+                                                | _ -> 2 ) 
+    
+
+let parseHandType (hand: int list) = 
+    let groups = hand.GroupBy(fun r -> r) |> Seq.map (fun v -> v.Count())
+    match groups.Count() with
+    | 5 -> HighCard
+    | 4 -> OnePair
+    | 3 -> (if (hand.GroupBy(fun r -> r).Any(fun (v) -> v.Count() = 3 )) then ThreeOfKind else TwoPair)
+    | 2 -> (if (hand.GroupBy(fun r -> r).Any(fun (v) -> v.Count() = 4 )) then FourOfKind else FullHouse)
+    | _ -> FiveOfKind
+    
+let mapTypeToOrder handtype = 
+    match handtype with
+    | FiveOfKind -> 7
+    | FourOfKind -> 6
+    | FullHouse -> 5
+    | ThreeOfKind -> 4
+    | TwoPair -> 3
+    | OnePair -> 2
+    | HighCard -> 1
+
+let mapToRank (hand: int list) = 
+    let groups = hand.GroupBy(fun r -> r)
+    groups
+
+
+
+let input = System.IO.File.ReadAllText("input.txt")
+let inputLines = input.Split("\r\n") 
+
+let parseGame (inputlines: string []) = 
+    inputlines |> Array.map (fun l -> 
+                                let parts = l.Split(" ")
+                                let hand = parseHand (parts.[0])
+                                let handType = parseHandType hand
+                                let bid = parts.[1] |> int
+                                {HandString = (parts.[0]); Hand = hand; HandType = handType; HandOrder = (mapTypeToOrder handType); Bid = bid}
+    ) |> Array.toList
+
+
+let compareGames (game1: Game) (game2: Game) = 
+    let handOrdeSort = compare game1.HandOrder game2.HandOrder
+    if handOrdeSort <> 0 then
+      handOrdeSort
+    else
+      let firstCardCompare = compare (int(game1.Hand.ElementAt(0))) (int(game2.Hand.ElementAt(0)))
+      if firstCardCompare <> 0 then
+        firstCardCompare
+      else
+        let secondCompare = compare (int(game1.Hand.ElementAt(1))) (int(game2.Hand.ElementAt(1)))
+        if secondCompare <> 0 then
+            secondCompare
+        else
+            let thirdCompare = compare (int(game1.Hand.ElementAt(2))) (int(game2.Hand.ElementAt(2)))
+            if thirdCompare <> 0 then
+                thirdCompare
+            else
+                let fourthCompare = compare (int(game1.Hand.ElementAt(3))) (int(game2.Hand.ElementAt(3)))
+                if fourthCompare <> 0 then
+                    fourthCompare
+                else
+                    compare (int(game1.Hand.ElementAt(4))) (int(game2.Hand.ElementAt(4)))
+
+
+
+
+// let sortedgames = parseGame inputLines |> List.sortWith compareGames
+
+// sortedgames |> List.mapi (fun i g -> (i + 1) * g.Bid) |> List.sum
+
+#!fsharp
+
+//four of a kind + J = five of a kind
+
+//full house + JJ = five of a kind
+//full house + JJJ = five of a kind
+
+//three of a kind + J = four of a kind
+//three of a kind + JJ = five of a kind
+//three of a kind + JJJ = four of a kind
+
+//two pair + JJ = four of a kind
+//two pair + J = full house
+
+//one pair + J = three of a kind
+//one pair + JJ = three of a kind
+
+//high card + J = one pair
+
+
+let mapWildCards (game: Game) = 
+    let jCount = game.HandString |> Seq.where (fun c -> c = 'J') |> Seq.length
+    match jCount with
+    | 0 -> game
+    | 1 -> match game.HandType with
+            | FourOfKind -> {game with HandType = FiveOfKind; HandOrder = (mapTypeToOrder(FiveOfKind))}
+            | ThreeOfKind -> {game with HandType = FourOfKind; HandOrder = (mapTypeToOrder(FourOfKind))}
+            | OnePair -> {game with HandType = ThreeOfKind; HandOrder = (mapTypeToOrder(ThreeOfKind))}
+            | HighCard -> {game with HandType = OnePair; HandOrder = (mapTypeToOrder(OnePair))}
+            | TwoPair -> {game with HandType = FullHouse; HandOrder = (mapTypeToOrder(FullHouse))}
+            |_ -> game
+    | 2 -> match game.HandType with
+            | FullHouse -> {game with HandType = FiveOfKind; HandOrder = (mapTypeToOrder(FiveOfKind))}
+            | ThreeOfKind -> {game with HandType = FiveOfKind; HandOrder = (mapTypeToOrder(FiveOfKind))}
+            | TwoPair -> {game with HandType = FourOfKind; HandOrder = (mapTypeToOrder(FourOfKind))}
+            | OnePair -> {game with HandType = ThreeOfKind; HandOrder = (mapTypeToOrder(ThreeOfKind))}
+            | _ -> game
+    | 3 -> match game.HandType with
+            | ThreeOfKind -> {game with HandType = FourOfKind; HandOrder = (mapTypeToOrder(FourOfKind))}
+            | FullHouse -> {game with HandType = FiveOfKind; HandOrder = (mapTypeToOrder(FiveOfKind))}
+            | _ -> game
+    | 4 -> match game.HandType with
+            | FourOfKind -> {game with HandType = FiveOfKind; HandOrder = (mapTypeToOrder(FiveOfKind))}
+            | _ -> game
+    | _ -> game
+
+
+let sortedgames = parseGame inputLines |> List.map  mapWildCards |>  List.sortWith compareGames
+
+sortedgames |> List.mapi (fun i g -> (i + 1) * g.Bid) |> List.sum
+
+// let jCount (line:string) = 
+//        line |>  Seq.where (fun c -> c = 'J') |> Seq.length
+
+// inputLines |> Array.where (fun l -> (jCount l) > 2)

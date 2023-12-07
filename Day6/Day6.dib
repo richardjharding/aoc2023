@@ -1,30 +1,30 @@
 #!meta
 
-{"kernelInfo":{"defaultKernelName":"fsharp","items":[{"aliases":[],"languageName":"fsharp","name":"fsharp"}]}}
+{"kernelInfo":{"defaultKernelName":"csharp","items":[{"aliases":[],"name":"csharp"},{"aliases":[],"languageName":"fsharp","name":"fsharp"}]}}
 
 #!fsharp
 
 open System
 open System.Linq
 
-type Race = {Record: int; Time: int}
+type Race = {Record: int64; Time: int64}
 
 
 let distance speed  time = 
     speed * time
 
-let durationOptions time = 
-    {0 + 1 .. time - 1}
+let durationOptions (time:int64) = 
+    {0L + 1L .. time - 1L}
 
 
 
 let distances timeLimit durationOptions  = 
     durationOptions |> Seq.map (fun d -> distance d (timeLimit - d))
 
-let winningDurationsCount record time =
+let winningDurationsCount (record:int64) time =
     durationOptions time |> distances time |> Seq.filter (fun d -> d > record) |> Seq.length
 
-let sample = [{Record = 9; Time = 7}; {Record = 40; Time = 15}; {Record = 200; Time = 30}]
+let sample = [{Record = 9L; Time = 7L}; {Record = 40L; Time = 15L}; {Record = 200L; Time = 30L}]
 
 
 
@@ -38,3 +38,13 @@ counts sample |> List.reduce (*)
 let input = [{Record = 202; Time = 44}; {Record = 1076; Time = 82}; {Record = 1138; Time = 69}; {Record = 1458; Time = 81}]
 
 counts input |> List.reduce (*)
+
+#!fsharp
+
+let input2 = [{Record = 202107611381458L; Time = 44826981L}]
+
+
+let counts2 (races: Race list) = 
+    races |> List.map (fun r -> winningDurationsCount r.Record r.Time)
+
+counts input2
