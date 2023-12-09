@@ -1,0 +1,38 @@
+#!meta
+
+{"kernelInfo":{"defaultKernelName":"fsharp","items":[{"aliases":[],"languageName":"fsharp","name":"fsharp"}]}}
+
+#!fsharp
+
+open System
+open System.Linq
+
+type History = {Readings: int list}
+
+let loadHistory filepath =
+    let input = System.IO.File.ReadAllText(filepath)
+    let inputLines = input.Split("\r\n")
+    let readings = inputLines |> Array.map (fun l -> l.Split(" ")|> Seq.map (fun s -> int s) |> Seq.toList) |> Array.map (fun x -> {Readings = x})
+    readings
+
+let records = loadHistory "input.txt"
+
+let calcDiffs (readings: int list) =
+    readings |> List.pairwise |> List.map (fun p -> (snd p) - (fst p))
+
+let allZero (diffs: int list) = 
+    (diffs.Where(fun r -> r = 0)).Count() = diffs.Count()
+
+let rec foo (acc: int list list) (readings: int list) = 
+    let diffs = calcDiffs readings
+    if (allZero diffs) then
+        diffs :: acc |> List.rev
+    else
+        foo (diffs :: acc) diffs
+
+let prediction (diffList: int list list) = 
+    diffList |> List.map (fun diffs -> diffs.Last()) |> List.sum    
+
+let lastDiffs =  foo [ (records.ElementAt(1).Readings)] (records.ElementAt(1).Readings)
+
+records |> Array.map (fun r -> foo ([r.Readings]) (r.Readings)) |> Array.map (fun d -> prediction d) |> Array.sum
