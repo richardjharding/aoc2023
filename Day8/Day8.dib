@@ -1,0 +1,117 @@
+#!meta
+
+{"kernelInfo":{"defaultKernelName":"csharp","items":[{"aliases":[],"name":"csharp"},{"aliases":[],"languageName":"fsharp","name":"fsharp"}]}}
+
+#!fsharp
+
+open System
+open System.Linq
+
+let inputlines filepath = 
+    let input = System.IO.File.ReadAllText(filepath)
+    let inputLines = input.Split("\r\n") 
+    inputLines
+
+type Node = {Location: string; Left: string; Right: string}
+
+type Dir = 
+    | L
+    | R
+
+let parseNode (line:string) =
+    let parts = line.Split("=")
+    let location = parts.[0].TrimStart().TrimEnd()
+    let directions = parts.[1].Replace("(","").Replace(")","").Split(",")
+    let left = directions.[0].TrimStart()
+    let right = directions.[1].TrimStart()
+    {Location = location; Left = left; Right = right}
+
+let nextLocation (currentNode: Node) (direction:Dir) =
+    match direction with
+    | L -> currentNode.Left
+    | R -> currentNode.Right
+
+let fetchNext (nodes: Map<string,Node>) (location: string) = 
+    //nodes.Where(fun n -> n.Location = location).First()
+    nodes |> Map.find location
+    
+
+let parseDirections (lines: string []) = 
+    lines.ElementAt(0) |> Seq.map (fun c -> if(c = 'L') then L else R) |> Seq.toList
+
+let parseNodes (lines:string[]) = 
+    lines |> Array.removeManyAt 0 2 |> Array.map (fun l -> parseNode l) |> Array.map (fun n -> (n.Location, n)) |> Map.ofArray
+    
+
+let input = inputlines "input.txt"
+
+let directionsMaster = parseDirections input
+let nodes = parseNodes input
+
+let rec FollowToTheEnd (steps:int) (currentNode: Node) (nodes: Map<string,Node>) (directions: Dir list) =
+    match directions with
+    | h :: t -> let nextNode = match h with
+                               | L -> fetchNext nodes currentNode.Left
+                               | R -> fetchNext nodes currentNode.Right
+                if (nextNode.Location = "ZZZ") then
+                    steps + 1
+                else
+                    FollowToTheEnd (steps + 1) nextNode nodes t
+    | [] -> FollowToTheEnd steps currentNode nodes directionsMaster
+
+
+//FollowToTheEnd 0 (nodes.First().Value) nodes directionsMaster
+
+#!fsharp
+
+//part 2
+
+let findStartNodes (nodes: Map<string,Node>) =
+    nodes.Values.Where(fun v -> v.Location.EndsWith("A")) |> Seq.toList
+
+let findAllNextNodes (nodes: Map<string, Node>) (currentNodes: Node list) (direction: Dir) = 
+    match direction with
+    | L ->  currentNodes |> List.map (fun node -> fetchNext nodes node.Left )
+    | R ->  currentNodes |> List.map (fun node -> fetchNext nodes node.Right)
+
+let allEndinZ (nodes: Node list) =
+    (nodes |> List.where (fun n -> n.Location.EndsWith("Z"))).Length = (nodes.Length)
+
+// not the way - will never complete in reasonable time - had to take a hint - calc steps to z for each then apply LCM
+
+// let rec followToTheEnd2 (steps:int) (currentNodes: Node list) (nodes: Map<string,Node>) (directions: Dir list) = 
+//     match directions with
+//     | h :: t -> let nextNodes = match h with
+//                                 | L -> findAllNextNodes nodes currentNodes L
+//                                 | R -> findAllNextNodes nodes currentNodes R
+//                 if (allEndinZ nextNodes) then
+//                     steps + 1
+//                 else
+//                     followToTheEnd2 (steps + 1) nextNodes nodes t
+
+//     | [] -> followToTheEnd2 steps currentNodes nodes directionsMaster
+    
+
+let startNodes = findStartNodes nodes
+
+// followToTheEnd2 0 startNodes nodes directionsMaster
+
+//startNodes
+
+let rec FollowToTheEnd3 (steps:int) (currentNode: Node) (nodes: Map<string,Node>) (directions: Dir list) =    
+    match directions with
+    | h :: t -> let nextNode = match h with
+                               | L -> fetchNext nodes currentNode.Left
+                               | R -> fetchNext nodes currentNode.Right
+                //printfn "Loc: %s\r\n" nextNode.Location
+                if (nextNode.Location.EndsWith("Z")) then
+                    printfn "found Z\r\n"
+                    steps + 1
+                else
+                    //printfn "Next dir\r\n"
+                    FollowToTheEnd3 (steps + 1) nextNode nodes t
+    | [] -> FollowToTheEnd3 steps currentNode nodes directionsMaster
+
+startNodes |> List.map (fun n -> (FollowToTheEnd3 0 n nodes directionsMaster))
+
+//take the resulting list of ints and use online LCM to get result
