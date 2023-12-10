@@ -36,7 +36,7 @@ let prediction (diffList: int list list) =
 let predictBack (diffList: int list list) =
     diffList |> List.map (fun d -> d.First())  |> List.reduce (-)
 
-let diffs =  foo [ (records.ElementAt(1).Readings)] (records.ElementAt(1).Readings)
+let diffs =  foo [ (records.ElementAt(2).Readings)] (records.ElementAt(2).Readings)
 
 
 let firstElements = diffs.Select(fun d -> d.First()) |> Seq.toList
@@ -66,4 +66,32 @@ let firstHistory (elements: int list) =
 
 firstHistory firstElements
 
-records |> Array.map (fun r -> foo [r.Readings] r.Readings) |> Array.map (fun d -> d.Select(fun x -> x.First())) |> Array.map (fun z -> Seq.toList z) |> Array.map (fun h -> firstHistory h) |> Array.sum
+//records |> Array.map (fun r -> foo [r.Readings] r.Readings) |> Array.map (fun d -> d.Select(fun x -> x.First())) |> Array.map (fun z -> Seq.toList z) |> Array.map (fun h -> firstHistory h) |> Array.sum
+
+#!fsharp
+
+// gave up and ported part2 from this example https://www.youtube.com/watch?v=bOdSvEXoy5Q
+
+let records = loadHistory "input.txt"
+
+// find the number to subtract from first reading:
+// take the readings
+// find the diffs
+// append diffs to 
+// if all zeros retrun zero
+// else take first element and add (-1 * (rec find difs in difs we just found))
+
+let rec f (numbers: int list) = 
+    let d = calcDiffs (numbers )
+    //printfn "Numbers: %A  - Diffs: %A\r\n" numbers d
+    if (allZero numbers) then
+        //printfn "Zero reached"
+        0
+    else
+        let x = f d 
+        let n = (numbers.First()) + (-1 * (x))
+        //printfn "Returning %i   = number first: %i - %i\r\n" n (numbers.First()) x   
+        (numbers.First()) + (-1 * (x))
+
+
+records |> Array.map (fun r -> f r.Readings) |> Array.sum
